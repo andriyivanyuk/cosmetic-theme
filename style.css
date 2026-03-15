@@ -1,0 +1,69 @@
+/*
+Theme Name: Cosmetic Theme
+Text Domain: de-shop-theme
+Version: 0.1.0
+*/
+
+.home5-cosmetic .home-slideshow .blur-up {
+  -webkit-filter: blur(0);
+  filter: blur(0);
+}
+
+.home5-cosmetic .home-slideshow:not(.slick-initialized) .slide img {
+  display: block;
+  width: 100%;
+}
+
+.home5-cosmetic
+  .home-slideshow:not(.slick-initialized)
+  .slideshow__text-content {
+  opacity: 1;
+  -ms-transform: translateY(-50%);
+  -webkit-transform: translateY(-50%);
+  transform: translateY(-50%);
+}
+
+/* Parallax hero fallback: keep layout identical to static template even when
+   legacy image-to-background script does not execute. */
+.home5-cosmetic .hero.hero--large.hero__overlay.bg-size {
+  position: relative;
+  overflow: hidden;
+}
+
+.home5-cosmetic .hero.hero--large.hero__overlay.bg-size.de-fixed-hero-bg {
+  background-attachment: fixed;
+}
+
+@media only screen and (max-width: 1024px) {
+  .home5-cosmetic .hero.hero--large.hero__overlay.bg-size.de-fixed-hero-bg {
+    background-attachment: scroll;
+  }
+}
+
+.home5-cosmetic .hero.hero--large.hero__overlay.bg-size .bg-img {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  -webkit-filter: blur(0) !important;
+  filter: blur(0) !important;
+  transform: translate3d(0, 0, 0) scale(1.06);
+  will-change: transform;
+}
+
+.home5-cosmetic
+  .hero.hero--large.hero__overlay.bg-size.de-fixed-hero-bg
+  .bg-img {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.home5-cosmetic .hero.hero--large.hero__overlay.bg-size .hero__inner {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+}
