@@ -8,6 +8,10 @@ $catalog_url = function_exists('de_shop_get_catalog_url')
     ? de_shop_get_catalog_url()
     : home_url('/catalog/');
 
+$nova_poshta_enabled = class_exists('\\DE_Shop\\Requests\\DeliverySettings')
+    ? \DE_Shop\Requests\DeliverySettings::is_nova_poshta_enabled()
+    : false;
+
 get_header();
 ?>
 
@@ -102,6 +106,54 @@ get_header();
                             <div class="col-12 col-sm-12 col-md-12 col-lg-12">
                                 <div class="form-group">
                                     <label
+                                        for="delivery_method"><?php esc_html_e('Спосіб доставки', 'de-shop-theme'); ?></label>
+                                    <select id="delivery_method" name="delivery_method" required>
+                                        <option value="pickup"><?php esc_html_e('Самовивіз', 'de-shop-theme'); ?>
+                                        </option>
+                                        <?php if ($nova_poshta_enabled): ?>
+                                            <option value="nova_poshta">
+                                                <?php esc_html_e('Нова Пошта (відділення)', 'de-shop-theme'); ?></option>
+                                        <?php endif; ?>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-sm-12 col-md-12 col-lg-12" id="nova-poshta-fields"
+                                style="display:none;">
+                                <fieldset>
+                                    <div class="row">
+                                        <div class="form-group col-md-12 col-lg-12 col-xl-12 required">
+                                            <label
+                                                for="delivery_city_search"><?php esc_html_e('Місто (Нова Пошта)', 'de-shop-theme'); ?></label>
+                                            <input type="text" id="delivery_city_search"
+                                                placeholder="<?php esc_attr_e('Почніть вводити назву міста', 'de-shop-theme'); ?>"
+                                                autocomplete="off">
+                                        </div>
+                                        <div class="form-group col-md-12 col-lg-12 col-xl-12 required">
+                                            <label
+                                                for="delivery_city_ref"><?php esc_html_e('Оберіть місто', 'de-shop-theme'); ?></label>
+                                            <select id="delivery_city_ref" name="delivery_city_ref">
+                                                <option value="">
+                                                    <?php esc_html_e(' --- Оберіть місто --- ', 'de-shop-theme'); ?>
+                                                </option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group col-md-12 col-lg-12 col-xl-12 required">
+                                            <label
+                                                for="delivery_warehouse_ref"><?php esc_html_e('Оберіть відділення', 'de-shop-theme'); ?></label>
+                                            <select id="delivery_warehouse_ref" name="delivery_warehouse_ref">
+                                                <option value="">
+                                                    <?php esc_html_e(' --- Оберіть відділення --- ', 'de-shop-theme'); ?>
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </div>
+
+                            <div class="col-12 col-sm-12 col-md-12 col-lg-12">
+                                <div class="form-group">
+                                    <label
                                         for="customer_comment"><?php esc_html_e('Коментар до замовлення', 'de-shop-theme'); ?></label>
                                     <textarea id="customer_comment" name="customer_comment" rows="5"></textarea>
                                 </div>
@@ -134,6 +186,13 @@ get_header();
         var ajaxUrl = '<?php echo esc_url(admin_url('admin-ajax.php')); ?>';
         var nonce = '<?php echo esc_js(wp_create_nonce('de_submit_request')); ?>';
         var fallbackImage = '<?php echo esc_url(get_stylesheet_directory_uri() . '/assets/images/product-images/product-image1.jpg'); ?>';
+        var isNovaPoshtaEnabled = <?php echo $nova_poshta_enabled ? 'true' : 'false'; ?>;
+        var deliveryMethodSelect = document.getElementById('delivery_method');
+        var novaPoshtaFields = document.getElementById('nova-poshta-fields');
+        var citySearchInput = document.getElementById('delivery_city_search');
+        var citySelect = document.getElementById('delivery_city_ref');
+        var warehouseSelect = document.getElementById('delivery_warehouse_ref');
+        var citySearchDebounce = null;
 
         if (!tbody) {
             return;
@@ -410,6 +469,158 @@ get_header();
             return;
         }
 
+        function setSelectOptions(selectElement, items, defaultLabel) {
+            if (!selectElement) {
+                return;
+            }
+
+            var html = '<option value="">' + escapeHtml(defaultLabel) + '</option>';
+
+            items.forEach(function (item) {
+                if (!item || typeof item !== 'object') {
+                    return;
+                }
+
+                var ref = item.ref ? String(item.ref) : '';
+                var name = item.name ? String(item.name) : '';
+
+                if (ref === '' || name === '') {
+                    return;
+                }
+
+                html += '<option value="' + escapeHtml(ref) + '">' + escapeHtml(name) + '</option>';
+            });
+
+            selectElement.innerHTML = html;
+        }
+
+        function toggleNovaPoshtaFields() {
+            if (!deliveryMethodSelect || !novaPoshtaFields) {
+                return;
+            }
+
+            var isNovaPoshta = deliveryMethodSelect.value === 'nova_poshta' && isNovaPoshtaEnabled;
+            novaPoshtaFields.style.display = isNovaPoshta ? '' : 'none';
+
+            if (citySelect) {
+                citySelect.required = isNovaPoshta;
+            }
+
+            if (warehouseSelect) {
+                warehouseSelect.required = isNovaPoshta;
+            }
+
+            if (!isNovaPoshta) {
+                if (citySearchInput) {
+                    citySearchInput.value = '';
+                }
+
+                setSelectOptions(citySelect, [], ' --- Оберіть місто --- ');
+                setSelectOptions(warehouseSelect, [], ' --- Оберіть відділення --- ');
+            }
+        }
+
+        function searchNovaPoshtaCities(query) {
+            var body = new URLSearchParams();
+            body.append('action', 'de_np_search_cities');
+            body.append('nonce', nonce);
+            body.append('query', query);
+
+            return fetch(ajaxUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                },
+                body: body.toString()
+            }).then(function (response) {
+                return response.json();
+            });
+        }
+
+        function loadNovaPoshtaWarehouses(cityRef) {
+            var body = new URLSearchParams();
+            body.append('action', 'de_np_get_warehouses');
+            body.append('nonce', nonce);
+            body.append('city_ref', cityRef);
+
+            return fetch(ajaxUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                },
+                body: body.toString()
+            }).then(function (response) {
+                return response.json();
+            });
+        }
+
+        if (deliveryMethodSelect) {
+            deliveryMethodSelect.addEventListener('change', function () {
+                toggleNovaPoshtaFields();
+            });
+        }
+
+        if (citySearchInput) {
+            citySearchInput.addEventListener('input', function () {
+                if (!deliveryMethodSelect || deliveryMethodSelect.value !== 'nova_poshta') {
+                    return;
+                }
+
+                var query = citySearchInput.value.trim();
+
+                if (citySearchDebounce) {
+                    clearTimeout(citySearchDebounce);
+                }
+
+                if (query.length < 2) {
+                    setSelectOptions(citySelect, [], ' --- Оберіть місто --- ');
+                    setSelectOptions(warehouseSelect, [], ' --- Оберіть відділення --- ');
+                    return;
+                }
+
+                citySearchDebounce = setTimeout(function () {
+                    searchNovaPoshtaCities(query)
+                        .then(function (data) {
+                            var items = data && data.success && data.data && Array.isArray(data.data.items)
+                                ? data.data.items
+                                : [];
+
+                            setSelectOptions(citySelect, items, ' --- Оберіть місто --- ');
+                            setSelectOptions(warehouseSelect, [], ' --- Оберіть відділення --- ');
+                        })
+                        .catch(function () {
+                            setSelectOptions(citySelect, [], ' --- Оберіть місто --- ');
+                            setSelectOptions(warehouseSelect, [], ' --- Оберіть відділення --- ');
+                        });
+                }, 300);
+            });
+        }
+
+        if (citySelect) {
+            citySelect.addEventListener('change', function () {
+                var cityRef = citySelect.value ? String(citySelect.value) : '';
+
+                if (cityRef === '') {
+                    setSelectOptions(warehouseSelect, [], ' --- Оберіть відділення --- ');
+                    return;
+                }
+
+                loadNovaPoshtaWarehouses(cityRef)
+                    .then(function (data) {
+                        var items = data && data.success && data.data && Array.isArray(data.data.items)
+                            ? data.data.items
+                            : [];
+
+                        setSelectOptions(warehouseSelect, items, ' --- Оберіть відділення --- ');
+                    })
+                    .catch(function () {
+                        setSelectOptions(warehouseSelect, [], ' --- Оберіть відділення --- ');
+                    });
+            });
+        }
+
+        toggleNovaPoshtaFields();
+
         form.addEventListener('submit', function (event) {
             event.preventDefault();
 
@@ -420,6 +631,15 @@ get_header();
             var customerName = customerNameInput ? customerNameInput.value.trim() : '';
             var customerPhone = customerPhoneInput ? customerPhoneInput.value.trim() : '';
             var customerComment = customerCommentInput ? customerCommentInput.value.trim() : '';
+            var deliveryMethod = deliveryMethodSelect ? String(deliveryMethodSelect.value || 'pickup') : 'pickup';
+            var deliveryCityRef = citySelect ? String(citySelect.value || '') : '';
+            var deliveryWarehouseRef = warehouseSelect ? String(warehouseSelect.value || '') : '';
+            var deliveryCityName = citySelect && citySelect.selectedIndex >= 0
+                ? String(citySelect.options[citySelect.selectedIndex].text || '')
+                : '';
+            var deliveryWarehouseName = warehouseSelect && warehouseSelect.selectedIndex >= 0
+                ? String(warehouseSelect.options[warehouseSelect.selectedIndex].text || '')
+                : '';
             var cartItems = loadCart();
 
             if (!cartItems.length) {
@@ -443,12 +663,33 @@ get_header();
                 return;
             }
 
+            if (deliveryMethod === 'nova_poshta') {
+                if (!isNovaPoshtaEnabled) {
+                    if (messageEl) {
+                        messageEl.textContent = 'Доставка Новою Поштою тимчасово недоступна.';
+                    }
+                    return;
+                }
+
+                if (deliveryCityRef === '' || deliveryWarehouseRef === '') {
+                    if (messageEl) {
+                        messageEl.textContent = 'Оберіть місто та відділення Нової Пошти.';
+                    }
+                    return;
+                }
+            }
+
             var body = new URLSearchParams();
             body.append('action', 'de_submit_request');
             body.append('nonce', nonce);
             body.append('customer_name', customerName);
             body.append('customer_phone', customerPhone);
             body.append('customer_comment', customerComment);
+            body.append('delivery_method', deliveryMethod);
+            body.append('delivery_city_ref', deliveryCityRef);
+            body.append('delivery_city_name', deliveryCityName);
+            body.append('delivery_warehouse_ref', deliveryWarehouseRef);
+            body.append('delivery_warehouse_name', deliveryWarehouseName);
             body.append('cart_items', JSON.stringify(cartItems));
 
             fetch(ajaxUrl, {
