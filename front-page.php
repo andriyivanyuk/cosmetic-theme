@@ -9,6 +9,37 @@ $new_arrivals = function_exists('de_get_new_arrivals_products') ? de_get_new_arr
 $best_offers = function_exists('de_get_best_offers_products') ? de_get_best_offers_products() : [];
 $featured = function_exists('de_get_featured_product') ? de_get_featured_product() : null;
 
+$used_product_ids = [];
+
+if ($featured instanceof \WP_Post) {
+    $used_product_ids[(int) $featured->ID] = true;
+}
+
+$filter_unique_posts = static function (array $posts, array &$used): array {
+    $result = [];
+
+    foreach ($posts as $post_item) {
+        if (!$post_item instanceof \WP_Post) {
+            continue;
+        }
+
+        $post_id = (int) $post_item->ID;
+
+        if (isset($used[$post_id])) {
+            continue;
+        }
+
+        $used[$post_id] = true;
+        $result[] = $post_item;
+    }
+
+    return $result;
+};
+
+$recommended = $filter_unique_posts($recommended, $used_product_ids);
+$new_arrivals = $filter_unique_posts($new_arrivals, $used_product_ids);
+$best_offers = $filter_unique_posts($best_offers, $used_product_ids);
+
 $theme_uri = get_stylesheet_directory_uri();
 $hero_default_image = $theme_uri . '/assets/images/slideshow-banners/home5-banner1.jpg';
 $hero_image_url = $hero_default_image;
@@ -38,6 +69,7 @@ $build_home_product_card = static function (\WP_Post $product, string $fallback_
     $product_id = (int) $product->ID;
     $meta_class = class_exists('\DE_Shop\\Products\\ProductMeta') ? '\\DE_Shop\\Products\\ProductMeta' : null;
 
+    $sku = '';
     $price = '';
     $old_price = '';
     $currency = '';
@@ -46,6 +78,7 @@ $build_home_product_card = static function (\WP_Post $product, string $fallback_
     $description = '';
 
     if (is_string($meta_class)) {
+        $sku = (string) $meta_class::get_sku($product_id);
         $price = (string) $meta_class::get_price($product_id);
         $old_price = (string) $meta_class::get_old_price($product_id);
         $currency = (string) $meta_class::get_currency($product_id);
@@ -55,26 +88,43 @@ $build_home_product_card = static function (\WP_Post $product, string $fallback_
     }
 
     $primary_image = get_the_post_thumbnail_url($product_id, 'large');
-    $primary_image = is_string($primary_image) && '' !== $primary_image ? $primary_image : $fallback_image;
+    $primary_image = is_string($primary_image) && '' !== $primary_image ? $primary_image : '';
 
-    $hover_image = $primary_image;
+    $hover_image = '';
 
     if (is_string($meta_class)) {
         $gallery_ids = $meta_class::get_gallery_ids($product_id);
 
-        if (!empty($gallery_ids)) {
-            $gallery_image = wp_get_attachment_image_url((int) $gallery_ids[0], 'large');
+        if ('' === $primary_image && !empty($gallery_ids)) {
+            $gallery_primary = wp_get_attachment_image_url((int) $gallery_ids[0], 'large');
 
-            if (is_string($gallery_image) && '' !== $gallery_image) {
-                $hover_image = $gallery_image;
+            if (is_string($gallery_primary) && '' !== $gallery_primary) {
+                $primary_image = $gallery_primary;
             }
         }
+
+        if (count($gallery_ids) > 1) {
+            $gallery_hover = wp_get_attachment_image_url((int) $gallery_ids[1], 'large');
+
+            if (is_string($gallery_hover) && '' !== $gallery_hover) {
+                $hover_image = $gallery_hover;
+            }
+        }
+    }
+
+    if ('' === $primary_image) {
+        $primary_image = $fallback_image;
+    }
+
+    if ('' === $hover_image) {
+        $hover_image = $primary_image;
     }
 
     return [
         'id' => $product_id,
         'title' => get_the_title($product_id),
         'permalink' => get_permalink($product_id),
+        'sku' => $sku,
         'primary_image' => $primary_image,
         'hover_image' => $hover_image,
         'price' => trim($price . ' ' . $currency),
@@ -150,7 +200,7 @@ get_header();
                                     <h2 class="h1 mega-title slideshow__title">Editors Picks</h2>
                                     <span class="mega-subtitle slideshow__subtitle">The Editors Essential Mascara
                                         Guide</span>
-                                    <span class="btn">??????? now</span>
+                                    <span class="btn">Замовити</span>
                                 </div>
                             </div>
                         </div>
@@ -167,14 +217,14 @@ get_header();
             <div class="row">
                 <div class="col-12 col-sm-12 col-md-12 col-lg-12">
                     <div class="section-header text-center">
-                        <h2 class="h2">?? ????????? ???????? ??? ???</h2>
-                        <p>??????????? ???????? ??? ????????? ??? $200</p>
+                        <h2 class="h2">Ми підібрали найкраще для вас</h2>
+                        <p>Безкоштовна доставка для замовлень від $200</p>
                     </div>
                     <div class="tabs-listing">
                         <ul class="tabs clearfix">
-                            <li class="active" rel="tab1">????????????</li>
-                            <li rel="tab2">???????</li>
-                            <li rel="tab3">???????? ??????????</li>
+                            <li class="active" rel="tab1">Рекомендуємо</li>
+                            <li rel="tab2">Новинки</li>
+                            <li rel="tab3">Найкращі пропозиції</li>
                         </ul>
                         <div class="tab_container">
                             <div id="tab1" class="tab_content grid-products">
@@ -1177,64 +1227,14 @@ get_header();
             <div class="row">
                 <div class="col-12 col-sm-12 col-md-12 col-lg-12">
                     <div class="section-header text-center">
-                        <h2 class="h2">???????? ?'???-?????????? ??? ???!</h2>
+                        <h2 class="h2">Найкращі б'юті-пропозиції для вас!</h2>
                     </div>
                 </div>
             </div>
             <div class="row">
-                <!--Featured Item-->
-                <div class="col-12 col-sm-6 col-md-4 col-lg-4 text-center">
-                    <p>
-                        <a href="#">
-                            <img class="blur-up lazyload"
-                                data-src="<?php echo esc_url(get_stylesheet_directory_uri()); ?>/assets/images/collection/cosmetic1.jpg"
-                                src="<?php echo esc_url(get_stylesheet_directory_uri()); ?>/assets/images/collection/cosmetic1.jpg"
-                                alt="feature-row__image">
-                        </a>
-                    </p>
-                    <h3 class="h4"><a href="#">????????? ?????????</a></h3>
-                    <div class="rte-setting">
-                        <p><strong>There is nothing more you can ask for. </strong>Gives your skin a natural glow with
-                            matte finish</p>
-                    </div>
-                    <a href="#" class="btn no-border">??????? Now</a>
+                <div class="col-12">
+                    <div class="row js-home-featured-offers"></div>
                 </div>
-                <!--End Featured Item-->
-                <!--Featured Item-->
-                <div class="col-12 col-sm-6 col-md-4 col-lg-4 text-center">
-                    <p>
-                        <a href="#">
-                            <img class="blur-up lazyload"
-                                data-src="<?php echo esc_url(get_stylesheet_directory_uri()); ?>/assets/images/collection/cosmetic2.jpg"
-                                src="<?php echo esc_url(get_stylesheet_directory_uri()); ?>/assets/images/collection/cosmetic2.jpg"
-                                alt="feature-row__image">
-                        </a>
-                    </p>
-                    <h3 class="h4"><a href="#">????? ??? ???</a></h3>
-                    <div class="rte-setting">
-                        <p>Enjoy the stay. Love the Shine Logn Lasting Ultramatte perfact lip color</p>
-                    </div>
-                    <a href="#" class="btn no-border">??????? ???? Arrivals</a>
-                </div>
-                <!--End Featured Item-->
-                <!--Featured Item-->
-                <div class="col-12 col-sm-6 col-md-4 col-lg-4 text-center">
-                    <p>
-                        <a href="#">
-                            <img class="blur-up lazyload"
-                                data-src="<?php echo esc_url(get_stylesheet_directory_uri()); ?>/assets/images/collection/cosmetic3.jpg"
-                                src="<?php echo esc_url(get_stylesheet_directory_uri()); ?>/assets/images/collection/cosmetic3.jpg"
-                                alt="feature-row__image">
-                        </a>
-                    </p>
-                    <h3 class="h4"><a href="#">???????? ??? ????</a></h3>
-                    <div class="rte-setting">
-                        <p>Wing it with perfection. Dramatic wing perfection. Fine tip liquid eyeliner stay long lasting
-                        </p>
-                    </div>
-                    <a href="#" class="btn no-border">Buy Now</a>
-                </div>
-                <!--End Featured Item-->
             </div>
         </div>
     </div>
@@ -1249,10 +1249,10 @@ get_header();
             <div class="hero__inner">
                 <div class="container">
                     <div class="wrap-text center text-large font-bold">
-                        <h2 class="h2 mega-title">??????????? ?'??????</h2>
-                        <div class="rte-setting mega-subtitle">?? ?? ????????, ????????? ???????????<br> ? ?? ??????!
+                        <h2 class="h2 mega-title">Надзвичайна м'якість</h2>
+                        <div class="rte-setting mega-subtitle">Ви не повірите, наскільки неймовірною<br> є ця помада!
                         </div>
-                        <a href="#" class="btn">??????? ????? ????????</a>
+                        <a href="#" class="btn">Замовте набір сьогодні</a>
                     </div>
                 </div>
             </div>
@@ -1266,12 +1266,14 @@ get_header();
             <div class="product-single-wrap">
                 <div class="row display-table">
                     <div class="col-12 col-sm-12 col-md-6 col-lg-6 display-table-cell">
-                        <img src="<?php echo esc_url(get_stylesheet_directory_uri()); ?>/assets/images/cosmetic-product/single-product.jpg"
-                            alt="" class="product-featured-img" />
+                        <a href="#" class="js-featured-product-link">
+                            <img src="<?php echo esc_url(get_stylesheet_directory_uri()); ?>/assets/images/cosmetic-product/single-product.jpg"
+                                alt="" class="product-featured-img" />
+                        </a>
                     </div>
                     <div class="col-12 col-sm-12 col-md-6 col-lg-6 display-table-cell">
                         <div class="product-single__meta">
-                            <h2 class="grid_item-title h2">???????????????</h2>
+                            <h2 class="grid_item-title h2">Суперпропозиція</h2>
                             <h2 class="product-single__title h4">
                                 <a href="#">Makeup &amp; Cosmetics Travel Bag</a>
                             </h2>
@@ -1301,15 +1303,15 @@ get_header();
                                 </div>
                                 <div class="product-form__item--submit">
                                     <button type="button" name="add" class="btn product-form__cart-submit">
-                                        <span>?????? ? ?????</span>
+                                        <span>Замовити</span>
                                     </button>
                                 </div>
                                 <div class="display-table shareRow">
                                     <div class="display-table-cell">
                                         <div class="wishlist-btn">
                                             <a class="wishlist add-to-wishlist" href="#"
-                                                title="?????? ?? ?????? ??????"><i class="icon anm anm-heart-l"
-                                                    aria-hidden="true"></i> <span>?????? ?? ?????? ??????</span></a>
+                                                title="Додати до списку бажань"><i class="icon anm anm-heart-l"
+                                                    aria-hidden="true"></i> <span>Додати до списку бажань</span></a>
                                         </div>
                                     </div>
                                 </div>
@@ -1331,23 +1333,23 @@ get_header();
                     <ul class="display-table store-info">
                         <li class="display-table-cell">
                             <i class="icon anm anm-truck-l"></i>
-                            <h5>Free Shipping Worldwide</h5>
+                            <h5>ДОСТАВКА ПО ВСІЙ УКРАЇНІ</h5>
                             <span class="sub-text">
-                                Diam augue augue in fusce voluptatem
+                                Відправляємо щодня Новою поштою та Укрпоштою
                             </span>
                         </li>
                         <li class="display-table-cell">
                             <i class="icon anm anm-money-bill-ar"></i>
-                            <h5>Money Back Guarantee</h5>
+                            <h5>ГАРАНТІЯ ПОВЕРНЕННЯ</h5>
                             <span class="sub-text">
-                                Use this text to display your store information
+                                Обмін або повернення протягом 14 днів
                             </span>
                         </li>
                         <li class="display-table-cell">
                             <i class="icon anm anm-comments-l"></i>
-                            <h5>24/7 Help Center</h5>
+                            <h5>ПІДТРИМКА УКРАЇНСЬКОЮ</h5>
                             <span class="sub-text">
-                                Use this text to display your store information
+                                Допоможемо з вибором у чаті щодня з 9:00 до 21:00
                             </span>
                         </li>
                     </ul>
@@ -1381,7 +1383,7 @@ get_header();
                 : '';
             var price = card.show_price && card.price
                 ? '<span class="price">' + escapeHtml(card.price) + '</span>'
-                : '<span class="price">Price on request</span>';
+                : '<span class="price">Ціну уточнюйте</span>';
 
             return '' +
                 '<div class="col-12 item">' +
@@ -1390,8 +1392,13 @@ get_header();
                 '      <img class="primary blur-up lazyload" data-src="' + escapeHtml(card.primary_image) + '" src="' + escapeHtml(card.primary_image) + '" alt="' + escapeHtml(card.title) + '" title="' + escapeHtml(card.title) + '">' +
                 '      <img class="hover blur-up lazyload" data-src="' + escapeHtml(card.hover_image) + '" src="' + escapeHtml(card.hover_image) + '" alt="' + escapeHtml(card.title) + '" title="' + escapeHtml(card.title) + '">' +
                 '    </a>' +
+                '    <div class="button-set">' +
+                '      <a href="javascript:void(0)" title="Швидкий перегляд" class="quick-view-popup quick-view js-open-quickview-home" data-toggle="modal" data-target="#content_quickview" data-product-id="' + escapeHtml(card.id) + '" data-product-title="' + escapeHtml(card.title) + '" data-product-sku="' + escapeHtml(card.sku || '-') + '" data-product-image="' + escapeHtml(card.primary_image) + '" data-product-price="' + escapeHtml(card.price) + '" data-product-link="' + escapeHtml(card.permalink) + '">' +
+                '        <i class="icon anm anm-search-plus-r"></i>' +
+                '      </a>' +
+                '    </div>' +
                 '    <form class="variants add" action="' + escapeHtml(card.permalink) + '" method="post" onclick="window.location.href=\'' + escapeHtml(card.permalink) + '\'">' +
-                '      <button class="btn btn-addto-cart" type="button" tabindex="0">View Product</button>' +
+                '      <button class="btn btn-addto-cart" type="button" tabindex="0">Замовити</button>' +
                 '    </form>' +
                 '  </div>' +
                 '  <div class="product-details text-center">' +
@@ -1409,7 +1416,7 @@ get_header();
             }
 
             if (!Array.isArray(cards) || cards.length === 0) {
-                slider.innerHTML = '<p class="text-center">No products selected for this section yet.</p>';
+                slider.innerHTML = '<p class="text-center">У цьому розділі поки немає товарів.</p>';
                 return;
             }
 
@@ -1420,14 +1427,242 @@ get_header();
         renderTab('#tab2', newArrivals);
         renderTab('#tab3', bestOffers);
 
+        var toPlainText = function (value) {
+            var temp = document.createElement('div');
+            temp.innerHTML = String(value || '');
+
+            return (temp.textContent || temp.innerText || '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        };
+
+        var buildFeaturedOfferHtml = function (card) {
+            var description = toPlainText(card.description || '');
+
+            if (!description) {
+                description = 'Оберіть цей товар у розділі найкращих пропозицій.';
+            }
+
+            return '' +
+                '<div class="col-12 col-sm-6 col-md-4 col-lg-4 text-center">' +
+                '  <p>' +
+                '    <a href="' + escapeHtml(card.permalink) + '">' +
+                '      <img class="blur-up lazyload" data-src="' + escapeHtml(card.primary_image) + '" src="' + escapeHtml(card.primary_image) + '" alt="' + escapeHtml(card.title) + '">' +
+                '    </a>' +
+                '  </p>' +
+                '  <h3 class="h4"><a href="' + escapeHtml(card.permalink) + '">' + escapeHtml(card.title) + '</a></h3>' +
+                '  <div class="rte-setting"><p>' + escapeHtml(description) + '</p></div>' +
+                '  <a href="' + escapeHtml(card.permalink) + '" class="btn no-border">Замовити</a>' +
+                '</div>';
+        };
+
+        var renderFeaturedOffers = function (cards) {
+            var container = document.querySelector('.js-home-featured-offers');
+
+            if (!container) {
+                return;
+            }
+
+            if (!Array.isArray(cards) || cards.length === 0) {
+                container.innerHTML = '<div class="col-12"><p class="text-center">У цьому розділі поки немає товарів.</p></div>';
+                return;
+            }
+
+            container.innerHTML = cards.slice(0, 3).map(buildFeaturedOfferHtml).join('');
+        };
+
+        renderFeaturedOffers(bestOffers);
+
+        var addToCart = function (product) {
+            if (!product || !product.id) {
+                return;
+            }
+
+            var cart = [];
+
+            try {
+                var saved = localStorage.getItem('de_cart');
+
+                if (saved) {
+                    var parsed = JSON.parse(saved);
+
+                    if (Array.isArray(parsed)) {
+                        cart = parsed;
+                    }
+                }
+            } catch (_err) {
+                cart = [];
+            }
+
+            var existingItem = null;
+
+            cart.forEach(function (item) {
+                if (item && String(item.id) === String(product.id)) {
+                    existingItem = item;
+                }
+            });
+
+            if (existingItem) {
+                var currentQty = parseInt(existingItem.qty, 10);
+                existingItem.qty = Number.isNaN(currentQty) ? 1 : currentQty + 1;
+            } else {
+                cart.push({
+                    id: String(product.id),
+                    title: String(product.title || ''),
+                    price: String(product.price || ''),
+                    image: String(product.image || ''),
+                    qty: 1
+                });
+            }
+
+            localStorage.setItem('de_cart', JSON.stringify(cart));
+            window.dispatchEvent(new Event('de:cart-updated'));
+
+            if (window.deShopCart && typeof window.deShopCart.showToast === 'function') {
+                window.deShopCart.showToast('Додано до кошика: ' + String(product.title || 'Товар'));
+            }
+        };
+
+        var getCardQuickviewData = function (trigger) {
+            var item = trigger ? trigger.closest('.item') : null;
+            var idFromData = trigger ? (trigger.getAttribute('data-product-id') || '') : '';
+            var titleFromData = trigger ? (trigger.getAttribute('data-product-title') || '') : '';
+            var skuFromData = trigger ? (trigger.getAttribute('data-product-sku') || '') : '';
+            var imageFromData = trigger ? (trigger.getAttribute('data-product-image') || '') : '';
+            var priceFromData = trigger ? (trigger.getAttribute('data-product-price') || '') : '';
+            var linkFromData = trigger ? (trigger.getAttribute('data-product-link') || '') : '';
+
+            var id = idFromData;
+            var title = titleFromData;
+            var link = linkFromData;
+            var image = imageFromData;
+            var price = priceFromData;
+
+            if (item) {
+                var nameLink = item.querySelector('.product-name a');
+                var priceNode = item.querySelector('.product-price .price');
+
+                if (!id && nameLink) {
+                    var href = nameLink.getAttribute('href') || '';
+                    var idMatch = href.match(/\/(\d+)\/?$/);
+
+                    if (idMatch && idMatch[1]) {
+                        id = idMatch[1];
+                    }
+                }
+
+                if (!title && nameLink) {
+                    title = (nameLink.textContent || '').trim();
+                }
+
+                if (!link && nameLink && nameLink.getAttribute('href')) {
+                    link = nameLink.getAttribute('href');
+                }
+
+                if (!image) {
+                    var primaryImage = item.querySelector('.product-image img.primary');
+
+                    if (primaryImage) {
+                        image = primaryImage.getAttribute('src') || primaryImage.getAttribute('data-src') || '';
+                    }
+                }
+
+                if (!price && priceNode) {
+                    price = (priceNode.textContent || '').trim();
+                }
+            }
+
+            return {
+                id: id,
+                title: title || 'Швидкий перегляд товару',
+                sku: skuFromData || '-',
+                image: image,
+                price: price,
+                link: link || '#'
+            };
+        };
+
+        document.addEventListener('click', function (event) {
+            var trigger = event.target.closest('.tab-slider-product .quick-view-popup');
+
+            if (!trigger) {
+                return;
+            }
+
+            event.preventDefault();
+
+            var data = getCardQuickviewData(trigger);
+            var quickviewTitle = document.getElementById('de-quickview-title');
+            var quickviewSku = document.getElementById('de-quickview-sku');
+            var quickviewImage = document.getElementById('de-quickview-image');
+            var quickviewButton = document.querySelector('.js-quickview-add-to-request');
+
+            if (quickviewTitle) {
+                quickviewTitle.textContent = data.title;
+            }
+
+            if (quickviewSku) {
+                quickviewSku.textContent = data.sku;
+            }
+
+            if (quickviewImage && data.image) {
+                quickviewImage.setAttribute('src', data.image);
+                quickviewImage.setAttribute('alt', data.title);
+            }
+
+            if (quickviewButton) {
+                var buttonLabel = quickviewButton.querySelector('span');
+
+                quickviewButton.setAttribute('data-product-id', data.id || '');
+                quickviewButton.setAttribute('data-product-title', data.title || '');
+                quickviewButton.setAttribute('data-product-price', data.price || '');
+                quickviewButton.setAttribute('data-product-image', data.image || '');
+                quickviewButton.setAttribute('data-product-link', data.link);
+
+                if (buttonLabel) {
+                    buttonLabel.textContent = 'Замовити';
+                }
+            }
+
+            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.modal) {
+                window.jQuery('#content_quickview').modal('show');
+            }
+        });
+
+        document.addEventListener('click', function (event) {
+            var quickviewButton = event.target.closest('.js-quickview-add-to-request');
+
+            if (!quickviewButton) {
+                return;
+            }
+
+            event.preventDefault();
+
+            addToCart({
+                id: quickviewButton.getAttribute('data-product-id') || '',
+                title: quickviewButton.getAttribute('data-product-title') || '',
+                price: quickviewButton.getAttribute('data-product-price') || '',
+                image: quickviewButton.getAttribute('data-product-image') || ''
+            });
+
+            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.modal) {
+                window.jQuery('#content_quickview').modal('hide');
+            }
+        });
+
         if (featured && featured.permalink) {
             var section = document.querySelector('.section.product-single.product-template__container');
 
             if (section) {
                 var image = section.querySelector('.product-featured-img');
+                var imageLink = section.querySelector('.js-featured-product-link');
                 var titleLink = section.querySelector('.product-single__title a');
                 var priceWrap = section.querySelector('.product-single__price');
                 var description = section.querySelector('.product-single__description');
+                var actionButton = section.querySelector('.product-form__cart-submit');
+                var actionButtonText = section.querySelector('.product-form__cart-submit span');
+                var quantityWrap = section.querySelector('.product-form__item--quantity');
+                var wishlistWrap = section.querySelector('.shareRow');
 
                 if (image) {
                     image.setAttribute('src', featured.primary_image || image.getAttribute('src') || '');
@@ -1439,19 +1674,49 @@ get_header();
                     titleLink.setAttribute('href', featured.permalink);
                 }
 
+                if (imageLink) {
+                    imageLink.setAttribute('href', featured.permalink);
+                    imageLink.setAttribute('title', featured.title || 'Перейти до товару');
+                }
+
                 if (priceWrap) {
                     var oldPart = featured.show_old_price && featured.old_price
                         ? '<span class="money">' + escapeHtml(featured.old_price) + '</span>'
                         : '';
                     var pricePart = featured.show_price && featured.price
                         ? '<span class="money">' + escapeHtml(featured.price) + '</span>'
-                        : '<span class="money">Price on request</span>';
+                        : '<span class="money">Ціну уточнюйте</span>';
 
                     priceWrap.innerHTML = oldPart + '<span class="product-price__price product-price__sale product-price__sale--single">' + pricePart + '</span>';
                 }
 
                 if (description && featured.description) {
                     description.textContent = featured.description;
+                }
+
+                if (actionButtonText) {
+                    actionButtonText.textContent = 'Замовити';
+                }
+
+                if (actionButton) {
+                    actionButton.addEventListener('click', function (event) {
+                        event.preventDefault();
+
+                        addToCart({
+                            id: featured.id,
+                            title: featured.title,
+                            price: featured.price,
+                            image: featured.primary_image
+                        });
+                    });
+                }
+
+                if (quantityWrap) {
+                    quantityWrap.style.display = 'none';
+                }
+
+                if (wishlistWrap) {
+                    wishlistWrap.style.display = 'none';
                 }
             }
         }
