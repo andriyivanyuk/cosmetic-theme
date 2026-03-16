@@ -536,7 +536,7 @@
         closeMarkup:
           '<button title="%title%" type="button" class="mfp-close">&#215;</button>',
         tClose: "Закрити (Esc)",
-        tLoading: "Вантажиться...",
+        tLoading: "Завантаження...",
         autoFocusLast: !0,
       },
     }),

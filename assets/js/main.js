@@ -57,7 +57,21 @@
   "use strict";
 
   function localizeLoadingText() {
-    var loadingText = "Вантажиться...";
+    var loadingText = "Завантаження...";
+    var isLoadingLabel = function (value) {
+      var text = String(value || "")
+        .replace(/\u2026/g, "...")
+        .trim()
+        .toLowerCase();
+
+      return (
+        text === "loading" ||
+        text === "loading..." ||
+        text === "loading .." ||
+        text === "вантажиться" ||
+        text === "вантажиться..."
+      );
+    };
 
     if ($.magnificPopup && $.magnificPopup.defaults) {
       $.magnificPopup.defaults.tLoading = loadingText;
@@ -66,13 +80,29 @@
 
     $(".mfp-preloader").each(function () {
       var currentText = String($(this).text() || "").trim();
-      if (currentText === "Loading..." || currentText === "Loading") {
+      if (isLoadingLabel(currentText)) {
         $(this).text(loadingText);
       }
     });
 
-    $("img[alt='Loading...']").attr("alt", "Завантаження");
-    $("[title='Loading...']").attr("title", loadingText);
+    $("img[alt], [title], [aria-label]").each(function () {
+      var $node = $(this);
+      var alt = $node.attr("alt");
+      var title = $node.attr("title");
+      var ariaLabel = $node.attr("aria-label");
+
+      if (typeof alt !== "undefined" && isLoadingLabel(alt)) {
+        $node.attr("alt", "Завантаження");
+      }
+
+      if (typeof title !== "undefined" && isLoadingLabel(title)) {
+        $node.attr("title", loadingText);
+      }
+
+      if (typeof ariaLabel !== "undefined" && isLoadingLabel(ariaLabel)) {
+        $node.attr("aria-label", loadingText);
+      }
+    });
   }
 
   // Apply now and again when popup lifecycle may re-render preloader text.
@@ -1008,7 +1038,7 @@
         $.magnificPopup.open({
           items: items,
           type: "image",
-          tLoading: "Вантажиться...",
+          tLoading: "Завантаження...",
           gallery: {
             enabled: true,
           },
@@ -1025,7 +1055,7 @@
         mainClass: "mfp-fade",
         removalDelay: 160,
         preloader: false,
-        tLoading: "Вантажиться...",
+        tLoading: "Завантаження...",
         fixedContentPos: false,
       });
     }
@@ -1036,7 +1066,7 @@
     $(".sizelink").magnificPopup({
       type: "inline",
       midClick: true,
-      tLoading: "Вантажиться...",
+      tLoading: "Завантаження...",
     });
   }
   size_popup();
@@ -1045,7 +1075,7 @@
     $(".emaillink").magnificPopup({
       type: "inline",
       midClick: true,
-      tLoading: "Вантажиться...",
+      tLoading: "Завантаження...",
     });
   }
   inquiry_popup();
