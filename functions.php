@@ -45,6 +45,23 @@ function de_shop_get_order_url(): string
     return home_url('/request/');
 }
 
+function de_shop_get_thank_you_url(): string
+{
+    $thank_you_page = get_page_by_path('thank-you');
+
+    if ($thank_you_page instanceof WP_Post) {
+        return get_permalink($thank_you_page);
+    }
+
+    $thank_you_ua_page = get_page_by_path('dyakuyemo');
+
+    if ($thank_you_ua_page instanceof WP_Post) {
+        return get_permalink($thank_you_ua_page);
+    }
+
+    return home_url('/thank-you/');
+}
+
 function de_shop_theme_enqueue_assets(): void
 {
     $theme_uri = get_stylesheet_directory_uri();
@@ -219,3 +236,30 @@ function de_shop_theme_enqueue_assets(): void
     }
 }
 add_action('wp_enqueue_scripts', 'de_shop_theme_enqueue_assets');
+
+function de_shop_render_virtual_thank_you_page(): void
+{
+    if (!is_404()) {
+        return;
+    }
+
+    global $wp;
+
+    $request_path = isset($wp->request) ? trim((string) $wp->request, '/') : '';
+
+    if ($request_path !== 'thank-you' && $request_path !== 'dyakuyemo') {
+        return;
+    }
+
+    $template_path = get_stylesheet_directory() . '/page-thank-you.php';
+
+    if (!file_exists($template_path)) {
+        return;
+    }
+
+    status_header(200);
+    nocache_headers();
+    include $template_path;
+    exit;
+}
+add_action('template_redirect', 'de_shop_render_virtual_thank_you_page', 0);

@@ -186,6 +186,14 @@ jQuery(function ($) {
     localStorage.setItem("de_cart", JSON.stringify(cart));
     window.dispatchEvent(new Event("de:cart-updated"));
 
+    if (
+      window.deShopCart &&
+      typeof window.deShopCart.showToast === "function"
+    ) {
+      var safeTitle = productTitle || "Товар";
+      window.deShopCart.showToast("Додано до кошика: " + safeTitle);
+    }
+
     $button.addClass("added");
     window.setTimeout(function () {
       $button.removeClass("added");

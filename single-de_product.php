@@ -366,6 +366,12 @@ get_header();
 
             localStorage.setItem('de_cart', JSON.stringify(cart));
             window.dispatchEvent(new Event('de:cart-updated'));
+
+            if (window.deShopCart && typeof window.deShopCart.showToast === 'function') {
+                var safeTitle = productTitle ? String(productTitle) : 'Товар';
+                var qtyText = quantity > 1 ? ' x' + String(quantity) : '';
+                window.deShopCart.showToast('Додано до кошика: ' + safeTitle + qtyText);
+            }
         });
     });
 </script>

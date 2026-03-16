@@ -5300,6 +5300,16 @@ input.checkbox {
 .home5-cosmetic #siteNav.medium > li a {
   font-weight: 400;
 }
+.home5-cosmetic .classicHeader:not(.stickyNav) {
+  top: 38px;
+}
+.home5-cosmetic #AccessibleNav {
+  display: flex;
+  justify-content: center;
+}
+.home5-cosmetic #siteNav.right {
+  text-align: center;
+}
 .home5-cosmetic .top-header {
   background: #23232c;
 }
@@ -6780,6 +6790,121 @@ body.home15-funiture-template {
 #site-scroll i {
   line-height: 40px;
 }
+
+.de-thank-you-page {
+  padding: 45px 0 60px;
+}
+
+.de-thank-you-wrap {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.de-thank-you-alert {
+  background: #e6f5ea;
+  border: 1px solid #b5dfc1;
+  border-radius: 8px;
+  padding: 22px 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.de-thank-you-alert__icon {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 50%;
+  background: #cdebd5;
+  color: #11773a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.de-thank-you-alert__title {
+  margin: 0 0 6px;
+  font-size: 24px;
+  line-height: 1.25;
+  color: #0f6d35;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.de-thank-you-alert__text {
+  margin: 0;
+  color: #245938;
+}
+
+.de-thank-you-actions {
+  margin-top: 20px;
+  text-align: right;
+}
+
+.de-cart-toast-stack {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.de-cart-toast {
+  width: min(340px, calc(100vw - 32px));
+  background: #daf1e2;
+  border: 1px solid #a6d8b7;
+  border-radius: 8px;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12);
+  color: #0f6d35;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 12px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+  pointer-events: auto;
+}
+
+.de-cart-toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.de-cart-toast__icon {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  border-radius: 50%;
+  background: #c7e9d3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.de-cart-toast__text {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.de-cart-toast__close {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: #0f6d35;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
 /*---------------------------------------
   End Footer ----------------------------
   ---------------------------------------*/
@@ -6956,4 +7081,15 @@ body.home15-funiture-template {
     border-top: 1px solid #f2f2f2;
     width: 100%;
   }
+}
+
+/* Keep footer pinned to the viewport bottom on short pages. */
+.pageWrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#footer {
+  margin-top: auto;
 }
