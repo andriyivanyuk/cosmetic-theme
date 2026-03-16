@@ -34,6 +34,10 @@ get_header();
                     $request_button_label = str_ireplace(['запит', 'Запит'], ['замовлення', 'Замовлення'], $request_button_label);
                 }
 
+                if (preg_match('/купити|купівля/ui', $request_button_label)) {
+                    $request_button_label = 'Додати до замовлення';
+                }
+
                 $request_button_text = '' !== trim($request_button_label)
                     ? $request_button_label
                     : 'Додати до замовлення';

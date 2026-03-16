@@ -7093,3 +7093,28 @@ body.home15-funiture-template {
 #footer {
   margin-top: auto;
 }
+
+/* Single product layout polish: clearer separation between image and details. */
+@media only screen and (min-width: 768px) {
+  .single-de_product
+    .product-template__container
+    .product-single
+    > .row
+    > div:first-child {
+    padding-right: 26px;
+  }
+
+  .single-de_product
+    .product-template__container
+    .product-single
+    > .row
+    > div:last-child {
+    padding-left: 26px;
+  }
+}
+
+.single-de_product .product-description ol,
+.single-de_product .product-description ul {
+  padding-left: 24px;
+  margin-top: 10px;
+}
