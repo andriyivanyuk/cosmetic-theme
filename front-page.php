@@ -1643,7 +1643,6 @@ get_header();
                 '    </a>' +
                 '  </p>' +
                 '  <h3 class="h4"><a href="' + escapeHtml(card.permalink) + '">' + escapeHtml(card.title) + '</a></h3>' +
-                '  <div class="rte-setting"><p>' + escapeHtml(description) + '</p></div>' +
                 '  <a href="' + escapeHtml(card.permalink) + '" class="btn no-border">Замовити</a>' +
                 '</div>';
         };
