@@ -11,6 +11,23 @@ $order_url = function_exists('de_shop_get_order_url')
     ? de_shop_get_order_url()
     : home_url('/request/');
 
+$default_logo_url = get_stylesheet_directory_uri() . '/assets/images/logo.svg';
+$logo_url = $default_logo_url;
+
+if (function_exists('de_get_homepage_settings')) {
+    $homepage_settings = de_get_homepage_settings();
+
+    if (is_array($homepage_settings) && !empty($homepage_settings['store_logo_id'])) {
+        $resolved_logo = wp_get_attachment_image_url(absint((int) $homepage_settings['store_logo_id']), 'full');
+
+        if (is_string($resolved_logo) && '' !== $resolved_logo) {
+            $logo_url = $resolved_logo;
+        }
+    }
+}
+
+$logo_alt = get_bloginfo('name');
+
 $is_home = is_front_page();
 $is_catalog = is_page('catalog') || is_page_template('page-catalog.php') || is_post_type_archive('de_product');
 $body_classes = ['belle'];
@@ -79,8 +96,8 @@ if ($is_home) {
                     <!--Desktop Logo-->
                     <div class="logo col-md-2 col-lg-2 d-none d-lg-block">
                         <a href="<?php echo esc_url(home_url('/')); ?>">
-                            <img src="<?php echo esc_url(get_stylesheet_directory_uri()); ?>/assets/images/logo.svg"
-                                alt="DE Shop" title="DE Shop" />
+                            <img src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr($logo_alt); ?>"
+                                title="<?php echo esc_attr($logo_alt); ?>" />
                         </a>
                     </div>
                     <!--End Desktop Logo-->
@@ -112,8 +129,8 @@ if ($is_home) {
                     <div class="col-6 col-sm-6 col-md-6 col-lg-2 d-block d-lg-none mobile-logo">
                         <div class="logo">
                             <a href="<?php echo esc_url(home_url('/')); ?>">
-                                <img src="<?php echo esc_url(get_stylesheet_directory_uri()); ?>/assets/images/logo.svg"
-                                    alt="DE Shop" title="DE Shop" />
+                                <img src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr($logo_alt); ?>"
+                                    title="<?php echo esc_attr($logo_alt); ?>" />
                             </a>
                         </div>
                     </div>
