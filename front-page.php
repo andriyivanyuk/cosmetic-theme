@@ -65,6 +65,30 @@ $hero_button_link = isset($settings['hero_button_link']) && (string) $settings['
     ? (string) $settings['hero_button_link']
     : '#';
 
+$hero2_default_image = $theme_uri . '/assets/images/slideshow-banners/home5-banner2.jpg';
+$hero2_image_url = $hero2_default_image;
+
+if (!empty($settings['hero2_image_id'])) {
+    $resolved_hero2 = wp_get_attachment_image_url(absint((int) $settings['hero2_image_id']), 'full');
+
+    if (is_string($resolved_hero2) && '' !== $resolved_hero2) {
+        $hero2_image_url = $resolved_hero2;
+    }
+}
+
+$hero2_title = isset($settings['hero2_title']) && (string) $settings['hero2_title'] !== ''
+    ? (string) $settings['hero2_title']
+    : 'Editors Picks';
+$hero2_subtitle = isset($settings['hero2_subtitle']) && (string) $settings['hero2_subtitle'] !== ''
+    ? (string) $settings['hero2_subtitle']
+    : 'The Editors Essential Mascara Guide';
+$hero2_button_text = isset($settings['hero2_button_text']) && (string) $settings['hero2_button_text'] !== ''
+    ? (string) $settings['hero2_button_text']
+    : 'Замовити';
+$hero2_button_link = isset($settings['hero2_button_link']) && (string) $settings['hero2_button_link'] !== ''
+    ? (string) $settings['hero2_button_link']
+    : '#';
+
 $build_home_product_card = static function (\WP_Post $product, string $fallback_image): array {
     $product_id = (int) $product->ID;
     $meta_class = class_exists('\DE_Shop\\Products\\ProductMeta') ? '\\DE_Shop\\Products\\ProductMeta' : null;
@@ -162,17 +186,92 @@ $featured_card = $featured instanceof \WP_Post
 
 get_header();
 ?>
+<style>
+    #page-content .de-hero-primary-slide .slideshow__overlay:before {
+        opacity: 0;
+    }
+
+    #page-content .de-hero-primary-slide .slideshow__text-content {
+        text-align: left;
+        margin-top: 0;
+        top: 45%;
+        transform: translateY(-50%);
+    }
+
+    #page-content .de-hero-primary-slide .wrap-caption {
+        max-width: 640px;
+        padding: 20px 10px 20px 0;
+    }
+
+    #page-content .de-hero-primary-slide .slideshow__title {
+        font-size: clamp(40px, 4.3vw, 64px);
+        line-height: 1.06;
+        letter-spacing: 0;
+        margin-bottom: 14px;
+        text-shadow: none;
+    }
+
+    #page-content .de-hero-primary-slide .slideshow__subtitle {
+        font-size: clamp(15px, 1.5vw, 24px);
+        line-height: 1.35;
+        text-transform: none;
+        margin-bottom: 22px;
+        text-shadow: none;
+        max-width: 520px;
+    }
+
+    #page-content .de-hero-primary-slide .btn {
+        margin-bottom: 24px;
+    }
+
+    #page-content .de-hero-primary-slide .slideshow__hero-points {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        max-width: 500px;
+    }
+
+    #page-content .de-hero-primary-slide .slideshow__hero-points li {
+        font-size: clamp(14px, 1.3vw, 21px);
+        line-height: 1.45;
+        margin-bottom: 8px;
+        text-shadow: none;
+    }
+
+    #page-content .de-hero-primary-slide .slideshow__hero-points .icon {
+        color: #fff;
+        margin-right: 8px;
+        font-size: clamp(14px, 1.2vw, 20px);
+        vertical-align: middle;
+    }
+
+    @media (max-width: 991px) {
+        #page-content .de-hero-primary-slide .slideshow__text-content {
+            top: 48%;
+        }
+
+        #page-content .de-hero-primary-slide .wrap-caption {
+            max-width: 92%;
+            padding: 12px 8px;
+        }
+
+        #page-content .de-hero-primary-slide .slideshow__hero-points li {
+            font-size: 16px;
+            margin-bottom: 6px;
+        }
+    }
+</style>
 <!--Body Content-->
 <div id="page-content">
     <!--??????? slider-->
     <div class="slideshow slideshow-wrapper pb-section">
         <div class="home-slideshow">
-            <div class="slide slideshow--medium">
+            <div class="slide slideshow--medium de-hero-primary-slide">
                 <div class="blur-up lazyload">
                     <img class="blur-up lazyload" data-src="<?php echo esc_url($hero_image_url); ?>"
                         src="<?php echo esc_url($hero_image_url); ?>" alt="<?php echo esc_attr($hero_title); ?>"
                         title="<?php echo esc_attr($hero_title); ?>" />
-                    <div class="slideshow__text-wrap slideshow__overlay classic middle">
+                    <div class="slideshow__text-wrap slideshow__overlay classic">
                         <div class="slideshow__text-content classic left">
                             <div class="container">
                                 <div class="wrap-caption left">
@@ -181,6 +280,14 @@ get_header();
                                         class="mega-subtitle slideshow__subtitle"><?php echo esc_html($hero_subtitle); ?></span>
                                     <a href="<?php echo esc_url($hero_button_link); ?>"
                                         class="btn"><?php echo esc_html($hero_button_text); ?></a>
+                                    <ul class="slideshow__hero-points">
+                                        <li><i class="icon anm anm-check" aria-hidden="true"></i> Доставка по Україні
+                                        </li>
+                                        <li><i class="icon anm anm-check" aria-hidden="true"></i> Перевірена косметика
+                                        </li>
+                                        <li><i class="icon anm anm-check" aria-hidden="true"></i> Підходить для
+                                            щоденного догляду</li>
+                                    </ul>
                                 </div>
                             </div>
                         </div>
@@ -189,18 +296,19 @@ get_header();
             </div>
             <div class="slide slideshow--medium">
                 <div class="blur-up lazyload">
-                    <img class="blur-up lazyload"
-                        data-src="<?php echo esc_url(get_stylesheet_directory_uri()); ?>/assets/images/slideshow-banners/home5-banner2.jpg"
-                        src="<?php echo esc_url(get_stylesheet_directory_uri()); ?>/assets/images/slideshow-banners/home5-banner2.jpg"
-                        alt="Editors Picks" title="Editors Picks" />
+                    <img class="blur-up lazyload" data-src="<?php echo esc_url($hero2_image_url); ?>"
+                        src="<?php echo esc_url($hero2_image_url); ?>" alt="<?php echo esc_attr($hero2_title); ?>"
+                        title="<?php echo esc_attr($hero2_title); ?>" />
                     <div class="slideshow__text-wrap slideshow__overlay classic top">
                         <div class="slideshow__text-content classic top">
                             <div class="container">
                                 <div class="wrap-caption center">
-                                    <h2 class="h1 mega-title slideshow__title">Editors Picks</h2>
-                                    <span class="mega-subtitle slideshow__subtitle">The Editors Essential Mascara
-                                        Guide</span>
-                                    <span class="btn">Замовити</span>
+                                    <h2 class="h1 mega-title slideshow__title"><?php echo esc_html($hero2_title); ?>
+                                    </h2>
+                                    <span
+                                        class="mega-subtitle slideshow__subtitle"><?php echo esc_html($hero2_subtitle); ?></span>
+                                    <a href="<?php echo esc_url($hero2_button_link); ?>"
+                                        class="btn"><?php echo esc_html($hero2_button_text); ?></a>
                                 </div>
                             </div>
                         </div>
